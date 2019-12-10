@@ -53,7 +53,7 @@ def train_autoencoder(input_dim,complie_kwags,fit_kwags,path):
     model.save(path)
     return model
 
-def thresh_autoencoder(model,validate)
+def thresh_autoencoder(model,validate):
     # Anomaly threshold
     validate_pred=model.predict(validate)
     mse=np.mean(np.power(validate-validate_pred,2),axis=1)
