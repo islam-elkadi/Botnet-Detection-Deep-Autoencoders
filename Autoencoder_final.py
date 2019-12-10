@@ -41,11 +41,26 @@ def create_model(input_dim):
     return autoencoder
 
 trained_model = create_model(top_n_features)
-trained_model.compile(loss="mean_squared_error",optimizer="sgd")
-tensorBoard = TensorBoard(log_dir=f"./logs", histogram_freq=0, write_graph=True, write_images=True)
+trained_model.compile(
+    loss="mean_squared_error",
+    optimizer="sgd"
+    )
+tensorBoard = TensorBoard(
+    log_dir=f"./logs", 
+    histogram_freq=0, 
+    write_graph=True, 
+    write_images=True
+    )
 #Traning the model
-trained_model.fit(x_train, x_train, epochs=30, batch_size=64, validation_data=(x_cv, x_cv),
-          verbose=1,callbacks=[tensorBoard])
+trained_model.fit(
+    x_train,
+    x_train, 
+    epochs=30,
+    batch_size=64,
+    validation_data=(x_cv, x_cv),
+    verbose=1,
+    callbacks=[tensorBoard]
+    )
 x_cv_predictions = trained_model.predict(x_cv)
 mse = np.mean(np.power(x_cv - x_cv_predictions, 2), axis=1)
 tr = mse.mean() + mse.std()

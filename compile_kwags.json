@@ -1,0 +1,4 @@
+{
+    "loss":"mean_squared_error",
+    "optimizer":"sgd"
+}

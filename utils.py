@@ -46,10 +46,10 @@ def auto_encoder(input_dim):
     autoencoder.add(Dense(input_dim))
     return autoencoder
 
-def train_autoencoder(input_dim,complie_kwags,fit_kwags,path):
+def train_autoencoder(input_dim,complie_kwags,fit_kwags,train,validate,path):
     model=auto_encoder(input_dim)
-    model.compile(complie_kwags)
-    model.fit(fit_kwags)
+    model.compile(**complie_kwags)
+    model.fit(train,train,**fit_kwags,validation_data=(validate,validate)
     model.save(path)
     return model
 
@@ -60,7 +60,7 @@ def thresh_autoencoder(model,validate):
     threshold=mse.mean()+mse.std()
     return threshold
 
-def test_autoencoder(model,threshold):
+def test_autoencoder(test,model,threshold):
     # Predict anomalies
     test_pred=model.predict(test.iloc[:,:-1]) 
     mse=np.mean(np.power(test.iloc[:,:-1]-test_pred,2),axis=1)
