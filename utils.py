@@ -49,7 +49,7 @@ def auto_encoder(input_dim):
 def train_autoencoder(input_dim,complie_kwags,fit_kwags,train,validate,path):
     model=auto_encoder(input_dim)
     model.compile(**complie_kwags)
-    model.fit(train,train,**fit_kwags,validation_data=(validate,validate)
+    model.fit(train,train,**fit_kwags,validation_data=(validate,validate))
     model.save(path)
     return model
 
