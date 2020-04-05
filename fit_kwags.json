@@ -1,5 +1,0 @@
-{
-    "epochs":30,
-    "batch_size":64,
-    "verbose":1
-}
