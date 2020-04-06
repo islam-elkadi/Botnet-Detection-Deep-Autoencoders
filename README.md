@@ -1,4 +1,4 @@
-# Botnet-Detection-Unsupervised-ML
+# Botnet-Detection-Deep-Autoencoders
 
 Hello World, this repo is an implementation of the **[N-BaIoT: Network-based Detection of IoT Botnet Attacks Using Deep Autoencoders]** 
 paper written by Yair Meidan, Michael Bohadana, Yael Mathov, Yisroel Mirsky, Dominik Breitenbacher, Asaf Shabtai, and Yuval Elovici.
