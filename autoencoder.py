@@ -11,9 +11,9 @@ from tensorflow.keras.callbacks import TensorBoard
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import recall_score, accuracy_score, precision_score, confusion_matrix
 
-class AutoEncoder(input_dim):
+class AutoEncoder():
 
-    def __init__():
+    def __init__(self, input_dim):
 
         # Initialize self._autoencoder
         self._autoencoder = Sequential()
@@ -32,6 +32,9 @@ class AutoEncoder(input_dim):
             histogram_freq=0,
             write_graph=True,
             write_images=True)
+        
+        # StandardScaler object
+        self._scaler = StandardScaler
 
     def preprocess(self, df):
         
@@ -41,8 +44,8 @@ class AutoEncoder(input_dim):
         # Create & segment begnin set
         benign = df[df["anomaly"]==0]
         benign_train, benign_validate, benign_test_unscald = np.split(benign.sample(frac=1, random_state=42), [int(1/3 * len(benign)), int(2/3 * len(benign))])
-        benign_train_scaled = scaler.fit_transform(benign_train.iloc[:, :-1].values)
-        benign_validate_scaled = scaler.fit_transform(benign_validate.iloc[:, :-1].values)
+        benign_train_scaled = self._scaler.fit_transform(benign_train.iloc[:, :-1].values)
+        benign_validate_scaled = self._scaler.fit_transform(benign_validate.iloc[:, :-1].values)
 
         return benign_train_scaled, benign_validate_scaled, begnin_test_unscaled, malicious
 
@@ -67,7 +70,7 @@ class AutoEncoder(input_dim):
 
         # Test model
         test_set = pd.concat([begnin_test, malicious_test])
-        test_scaled = scaler.transform(test_set.iloc[:,:-1].values)
+        test_scaled = self._scaler.transform(test_set.iloc[:,:-1].values)
         test_pred = self._autoencoder.predict(test_scaled)
 
         # Predict test set
@@ -80,12 +83,12 @@ class AutoEncoder(input_dim):
 
 if __name__=="__main__":
 
-    # Auto-encoder
-    model = AutoEncoder()
-
     # Load dataset
     df = pd.concat([x for x in pd.read_csv("dataset.csv", low_memory=False, chunksize=100000)], ignore_index=True)
     df = df.loc[:, ~df.columns.str.contains('^Unnamed')].reset_index(drop=True)
+    
+    # Auto-encoder
+    model = AutoEncoder(df.shape[1])
 
     # Partition data
     benign_train_scaled, benign_validate_scaled, begnin_test_unscaled, malicious = model.preprocess(df)
