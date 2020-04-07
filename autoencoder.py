@@ -69,7 +69,7 @@ class AutoEncoder():
         tr = mse.mean() + mse.std()
 
         # Test model
-        test_set = pd.concat([begnin_test, malicious_test])
+        test_set = pd.concat([begnin_test, malicious_test], sort=True, ignore_index=True)
         test_scaled = self._scaler.transform(test_set.iloc[:,:-1].values)
         test_pred = self._autoencoder.predict(test_scaled)
 
