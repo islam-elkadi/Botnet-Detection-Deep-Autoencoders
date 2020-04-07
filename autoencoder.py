@@ -88,7 +88,7 @@ if __name__=="__main__":
     df = df.loc[:, ~df.columns.str.contains('^Unnamed')].reset_index(drop=True)
     
     # Auto-encoder
-    model = AutoEncoder(df.shape[1])
+    model = AutoEncoder(115)
 
     # Partition data
     benign_train_scaled, benign_validate_scaled, begnin_test_unscaled, malicious = model.preprocess(df)
