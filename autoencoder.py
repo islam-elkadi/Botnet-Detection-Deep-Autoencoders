@@ -34,7 +34,7 @@ class AutoEncoder():
             write_images=True)
         
         # StandardScaler object
-        self._scaler = StandardScaler
+        self._scaler = StandardScaler()
 
     def preprocess(self, df):
         
@@ -43,11 +43,11 @@ class AutoEncoder():
 
         # Create & segment begnin set
         benign = df[df["anomaly"]==0]
-        benign_train, benign_validate, benign_test_unscald = np.split(benign.sample(frac=1, random_state=42), [int(1/3 * len(benign)), int(2/3 * len(benign))])
+        benign_train, benign_validate, benign_test_unscaled = np.split(benign.sample(frac=1, random_state=42), [int(1/3 * len(benign)), int(2/3 * len(benign))])
         benign_train_scaled = self._scaler.fit_transform(benign_train.iloc[:, :-1].values)
         benign_validate_scaled = self._scaler.fit_transform(benign_validate.iloc[:, :-1].values)
 
-        return benign_train_scaled, benign_validate_scaled, begnin_test_unscaled, malicious
+        return benign_train_scaled, benign_validate_scaled, benign_test_unscaled, malicious
 
     def train(self, train_scaled):
         self._autoencoder.compile(loss="mean_squared_error", optimizer="sgd")
