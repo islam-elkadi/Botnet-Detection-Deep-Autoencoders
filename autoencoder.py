@@ -2,7 +2,6 @@
 import numpy as np
 import pandas as pd
 from argparse import ArgumentParser
-from timeit import default_timer as timer
 
 # Keras imports
 from tensorflow.keras.layers import Dense
@@ -54,7 +53,7 @@ class AutoEncoder():
         # StandardScaler object
         self._scaler = StandardScaler()
 
-    def train(self, df, learning_rate, batch_size, epochs):
+    def train(self, df, batch_size, epochs):
         """
             Trains Deep Autoencoder on training set.
             Arguments:
@@ -63,7 +62,8 @@ class AutoEncoder():
                 batch_size:
                 epochs:
         """
-        self._autoencoder.compile(loss="mean_squared_error", optimizer=SGD(lr=learning_rate))
+        df = self._scaler.fit_transform(df)
+        self._autoencoder.compile(loss="mean_squared_error", optimizer="sgd")
         self._autoencoder.fit(df,
                               df,
                               epochs=epochs,
@@ -72,7 +72,7 @@ class AutoEncoder():
                               callbacks=[self._tensorboard, self._early_stopping]
                             )
 
-    def test(self, df, tr):
+    def test(self, df):
         """
             Tests performance of Deep Autoencoder on a test set.
             Arguments:
@@ -80,50 +80,49 @@ class AutoEncoder():
                 tr: anomaly threshold
         """
         
-        test_scaled = df.sample(frac=1)
-        
+        # random shuffle
+        df = df.sample(frac=1)
+
         # Partition test set
-        test_input, test_target = test_scaled.iloc[:,:-1].values, test_scaled.iloc[:,-1].values
+        test_input, test_target = df.iloc[:,:-1].values, df.iloc[:,-1].values
+
+        # Scale test input
+        test_scaled = self._scaler.fit_transform(test_input)
 
         # Predict test targets
-        test_pred = self._autoencoder.predict(test_input)
+        test_pred = self._autoencoder.predict(test_scaled)
         mse = np.mean(np.power(test_scaled - test_pred, 2), axis=1)
         predictions = (mse > tr).astype(int)
 
-        print(f"Accuracy: {round(accuracy_score(test_set.iloc[:,-1], predictions), 4)*100}%")
-        print(f"Recall: {round(recall_score(test_set.iloc[:,-1], predictions), 4)*100}%")
-        print(f"Precision: {round(precision_score(test_set.iloc[:,-1], predictions), 4)*100}%")
+        print(f"Anomaly threshold: {round(mse, 2)}")
+        print(f"Accuracy: {round(accuracy_score(test_target, predictions), 4)*100}%")
+        print(f"Recall: {round(recall_score(test_target, predictions), 4)*100}%")
+        print(f"Precision: {round(precision_score(test_target, predictions), 4)*100}%")
+        print(f"Confusion matrix: {confusion_matrix}")
 
 if __name__=="__main__":
 
     # CLI arguments
     parser = ArgumentParser()
+    parser.add_argument('-p', '--path', help='path to dataset', type=str)
     parser.add_argument('-e', '--epochs', help='No. of epochs', type=int)
     parser.add_argument('-bs', '--batch_size', help='Batch size', type=int)
-    parser.add_argument('-lr', '--learning_rate', help='Learning rate', type=float)
-    parser.add_argument('-tr', '--threshold', help='anomaly threshold', type=float)
-    parser.add_argument('-bp', '--begnin_path', help='path to begnin dataset', type=str)
-    parser.add_argument('-mp', '--malicious_path', help='path to malicious dataset', type=str)
+    # parser.add_argument('-lr', '--learning_rate', help='Learning rate', type=float)
     args = parser.parse_args()
 
-    # StandardScaler scaler object
-    scaler = StandardScaler()
-
-    # Load begnin dataset
-    begnin = pd.read_csv(args.begnin_path, low_memory=False)
-    begnin = begnin.loc[:, ~begnin.columns.str.contains('^Unnamed')]
-
-    # Load malicious dataset
-    malicious = pd.read_csv(args.malicious_path, low_memory=False)
-    malicious = malicious.loc[:, ~malicious.columns.str.contains('^Unnamed')]    
+    # Load dataset
+    df = pd.concat([x for x in pd.read_csv("dataset.csv", low_memory=False, chunksize=100000)], ignore_index=True)
+    df = df.loc[:, ~df.columns.str.contains('^Unnamed')].reset_index(drop=True)
 
     # Create K-folds 
     kf = KFold(n_splits=10, random_state=42, shuffle=True)
 
     # Partition begnin dataset
+    begnin = df[df["anomaly"]==0]
     begnin_partitions = kf.split(begnin)
 
     # Partition malicious dataset
+    malicious = df[df["anomaly"]==1]
     malicious_partitions = kf.split(malicious)
 
     # Iterate through begnin & malicious data partitions simultaneously
@@ -133,31 +132,18 @@ if __name__=="__main__":
         train_idx, test_idx = begnin_data
         begnin_train, begnin_test = begnin.iloc[train_idx,:], begnin.iloc[test_idx,:]
 
-        # malicious training, testing set split
+        # malicious testing set split
         train_idx, test_idx = malicious_data
-        _, malicious_test = malicious.iloc[train_idx,:], malicious.iloc[test_idx,:]
+        malicious_test = malicious.iloc[test_idx,:]
 
-        # scale training_x set
-        begnin_train_scaled = scaler.fit_transform(begnin_train)
-
-        # define targets for begning & malicious
-        begnin_test["anomaly"] = 0
-        malicious_test["anomaly"] = 1
-
-        # merge & scale test sets
+        # merge test sets
         merged_test = pd.concat([begnin_test, malicious_test])
-        merged_test.iloc[:, :-1] = scaler.transform(merged_test.iloc[:, :-1])
 
-        # Instantiate & initialize auto-encoder
+        # Initialize auto-encoder
         model = AutoEncoder(115)
 
-        toc = timer()
         # Train model
-        model.train(begnin_train_scaled, args.learning_rate, args.batch_size, args.epochs)
-        tic = timer()
-        print(tic-toc)
+        model.train(begnin_train.iloc[:, :-1], args.batch_size, args.epochs)
 
         # Evaluate model
-        model.test(merged_test, args.threshold)
-
-        break
+        model.test(merged_test)
