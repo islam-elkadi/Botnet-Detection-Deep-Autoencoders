@@ -9,6 +9,7 @@ from tensorflow.keras.callbacks import TensorBoard
 
 # Sklearn imports
 from sklearn.preprocessing import StandardScaler
+from sklearn.model_selection import KFold, train_test_split
 from sklearn.metrics import recall_score, accuracy_score, precision_score, confusion_matrix
 
 class AutoEncoder():
@@ -43,11 +44,11 @@ class AutoEncoder():
 
         # Create & segment begnin set
         benign = df[df["anomaly"]==0]
-        benign_train, benign_validate, benign_test_unscaled = np.split(benign.sample(frac=1, random_state=42), [int(1/3 * len(benign)), int(2/3 * len(benign))])
+        benign_train, benign_optimization, benign_test_unscaled = np.split(benign.sample(frac=1, random_state=42), [int(1/3 * len(benign)), int(2/3 * len(benign))])
         benign_train_scaled = self._scaler.fit_transform(benign_train.iloc[:, :-1].values)
-        benign_validate_scaled = self._scaler.fit_transform(benign_validate.iloc[:, :-1].values)
+        benign_optimization_scaled = self._scaler.fit_transform(benign_optimization.iloc[:, :-1].values)
 
-        return benign_train_scaled, benign_validate_scaled, benign_test_unscaled, malicious
+        return benign_train_scaled, benign_optimization_scaled, benign_test_unscaled, malicious
 
     def train(self, train_scaled):
         self._autoencoder.compile(loss="mean_squared_error", optimizer="sgd")
@@ -83,18 +84,35 @@ class AutoEncoder():
 
 if __name__=="__main__":
 
+    # StandardScaler scaler object
+    scaler = StandardScaler()
+
     # Load dataset
     df = pd.concat([x for x in pd.read_csv("dataset.csv", low_memory=False, chunksize=100000)], ignore_index=True)
     df = df.loc[:, ~df.columns.str.contains('^Unnamed')].reset_index(drop=True)
-    
-    # Auto-encoder
-    model = AutoEncoder(115)
 
-    # Partition data
-    benign_train_scaled, benign_validate_scaled, begnin_test_unscaled, malicious = model.preprocess(df)
+    # Partition dataset
+    x_train, x_test, y_train, y_test = train_test_split(df.iloc[:, :-1], df.iloc[:,-1], test_size=0.20, random_state=42)
 
-    # Train model
-    model.train(benign_train_scaled)
+    # Create K-folds 
+    kf = KFold(n_splits=10, random_state=42, shuffle=True)
 
-    # Evaluate model
-    model.test(benign_validate_scaled, begnin_test_unscaled, malicious)
+    for train_index, valid_index in kf.split(x_train):
+
+        # create training set
+        training_x, _ = x_train[train_index], y_train[train_index]
+
+        # create validation set
+        testing_x, testing_y = x_test[valid_index], y_test[valid_index]
+
+        # scale training_x set
+        training_x = scaler.fit_transform(training_x)
+
+        # Instantiate & initialize auto-encoder
+        model = AutoEncoder(115)
+
+        # Train model
+        model.train(training_x)
+
+        # Evaluate model
+        model.test(benign_optimization_scaled, begnin_test_unscaled, malicious)
